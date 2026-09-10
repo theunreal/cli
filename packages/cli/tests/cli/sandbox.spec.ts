@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { setupCLITests } from "./testkit/index.js";
 
 const APP_ID = "test-app-id";
+const BRANCH_ID = "branch-123";
 const base = `/api/apps/${APP_ID}/sandbox-bridge`;
 
 describe("sandbox commands", () => {
@@ -10,7 +11,8 @@ describe("sandbox commands", () => {
   it("ls prints the JSON result", async () => {
     // Given
     await t.givenLoggedIn({ email: "test@example.com", name: "Test User" });
-    t.api.mockRoute("POST", `${base}/list_directory`, (_req, res) => {
+    t.api.mockRoute("POST", `${base}/list_directory`, (req, res) => {
+      expect(req.body.branch_id).toBeUndefined();
       res.status(200).json({
         entries: [{ name: "src", path: "src", type: "directory" }],
         truncated: false,
@@ -23,6 +25,85 @@ describe("sandbox commands", () => {
     // Then
     t.expectResult(result).toSucceed();
     t.expectResult(result).toContain('"type": "directory"');
+  });
+
+  it.each([
+    {
+      command: ["ls"],
+      endpoint: "list_directory",
+      response: { entries: [], truncated: false },
+    },
+    {
+      command: ["read", "notes.txt"],
+      endpoint: "read_file",
+      response: { files: [] },
+    },
+    {
+      command: ["write", "notes.txt", "--content", "hello"],
+      endpoint: "write_file",
+      response: {
+        path: "notes.txt",
+        bytes_written: 5,
+        created: true,
+        overwritten: false,
+      },
+    },
+    {
+      command: [
+        "edit",
+        "notes.txt",
+        "--edits-json",
+        '[{"old_text":"a","new_text":"b"}]',
+      ],
+      endpoint: "edit_file",
+      response: { path: "notes.txt", diff: "", applied: true },
+    },
+    {
+      command: ["grep", "hello"],
+      endpoint: "grep",
+      response: { matches: [], truncated: false, returned_matches: 0 },
+    },
+    {
+      command: ["run", "pwd"],
+      endpoint: "run_command",
+      response: {
+        stdout: "/app",
+        stderr: "",
+        exit_code: 0,
+        truncated: false,
+        duration_ms: 1,
+      },
+    },
+    {
+      command: ["checkpoint"],
+      endpoint: "create_checkpoint",
+      response: {
+        checkpoint_id: "cp_123",
+        name: null,
+        git_commit_hash: "abc123",
+      },
+    },
+  ])("$command.0 forwards --branch-id", async ({
+    command,
+    endpoint,
+    response,
+  }) => {
+    await t.givenLoggedIn({ email: "test@example.com", name: "Test User" });
+    t.api.mockRoute("POST", `${base}/${endpoint}`, (req, res) => {
+      expect(req.body.branch_id).toBe(BRANCH_ID);
+      res.status(200).json(response);
+    });
+
+    const result = await t.run(
+      "sandbox",
+      ...command,
+      "--branch-id",
+      BRANCH_ID,
+      "--app-id",
+      APP_ID,
+    );
+
+    t.expectResult(result).toSucceed();
   });
 
   it("--json writes a pure JSON document to stdout (status on stderr)", async () => {

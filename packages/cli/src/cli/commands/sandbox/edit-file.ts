@@ -6,9 +6,10 @@ import { InvalidInputError } from "@/core/errors.js";
 import { getAppContext } from "@/core/project/index.js";
 import { editFile } from "@/core/resources/sandbox/api.js";
 import type { EditSpec } from "@/core/resources/sandbox/schema.js";
+import type { SandboxBranchOptions } from "./shared.js";
 import { resolveFlagOrStdin, toJsonStdout } from "./shared.js";
 
-interface EditFileOptions {
+interface EditFileOptions extends SandboxBranchOptions {
   editsJson?: string;
   dryRun?: boolean;
 }
@@ -52,7 +53,13 @@ async function editFileAction(
 
   const result = await runTask(
     options.dryRun ? "Previewing edit" : "Editing file",
-    () => editFile(appId, { path, edits, dry_run: options.dryRun }),
+    () =>
+      editFile(appId, {
+        path,
+        edits,
+        dry_run: options.dryRun,
+        branch_id: options.branchId,
+      }),
   );
 
   return {
@@ -70,6 +77,7 @@ export function getSandboxEditFileCommand(): Command {
       "JSON array of edits (if omitted, read from stdin)",
     )
     .option("--dry-run", "Return the unified diff without writing")
+    .option("--branch-id <id>", "Operate on a specific app branch")
     .addHelpText(
       "after",
       `

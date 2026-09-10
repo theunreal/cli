@@ -3,9 +3,10 @@ import type { CLIContext, RunCommandResult } from "@/cli/types.js";
 import { Base44Command } from "@/cli/utils/index.js";
 import { getAppContext } from "@/core/project/index.js";
 import { runCommand } from "@/core/resources/sandbox/api.js";
+import type { SandboxBranchOptions } from "./shared.js";
 import { parsePositiveInt, toJsonStdout } from "./shared.js";
 
-interface RunCommandOptions {
+interface RunCommandOptions extends SandboxBranchOptions {
   cwd?: string;
   timeoutMs?: string;
 }
@@ -20,7 +21,12 @@ async function runCommandAction(
   const command = commandParts.join(" ");
 
   const result = await runTask("Running command", () =>
-    runCommand(appId, { command, cwd: options.cwd, timeout_ms: timeoutMs }),
+    runCommand(appId, {
+      command,
+      cwd: options.cwd,
+      timeout_ms: timeoutMs,
+      branch_id: options.branchId,
+    }),
   );
 
   // The HTTP call succeeded, so the CLI exits 0 regardless of the remote
@@ -37,6 +43,7 @@ export function getSandboxRunCommandCommand(): Command {
       "--timeout-ms <n>",
       "Timeout in milliseconds (default 120000, max 600000)",
     )
+    .option("--branch-id <id>", "Operate on a specific app branch")
     .addHelpText(
       "after",
       `

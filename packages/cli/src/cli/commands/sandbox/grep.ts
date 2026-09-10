@@ -3,9 +3,10 @@ import type { CLIContext, RunCommandResult } from "@/cli/types.js";
 import { Base44Command } from "@/cli/utils/index.js";
 import { getAppContext } from "@/core/project/index.js";
 import { grep } from "@/core/resources/sandbox/api.js";
+import type { SandboxBranchOptions } from "./shared.js";
 import { parsePositiveInt, toJsonStdout } from "./shared.js";
 
-interface GrepOptions {
+interface GrepOptions extends SandboxBranchOptions {
   path?: string;
   regex?: boolean;
   caseSensitive?: boolean;
@@ -29,6 +30,7 @@ async function grepAction(
       case_sensitive: options.caseSensitive,
       glob: options.glob,
       max_results: maxResults,
+      branch_id: options.branchId,
     }),
   );
 
@@ -44,5 +46,6 @@ export function getSandboxGrepCommand(): Command {
     .option("--case-sensitive", "Case-sensitive match")
     .option("--glob <glob>", 'File glob filter, e.g. "*.tsx"')
     .option("--max-results <n>", "Maximum number of match lines to return")
+    .option("--branch-id <id>", "Operate on a specific app branch")
     .action(grepAction);
 }

@@ -3,9 +3,10 @@ import type { CLIContext, RunCommandResult } from "@/cli/types.js";
 import { Base44Command } from "@/cli/utils/index.js";
 import { getAppContext } from "@/core/project/index.js";
 import { createCheckpoint } from "@/core/resources/sandbox/api.js";
+import type { SandboxBranchOptions } from "./shared.js";
 import { toJsonStdout } from "./shared.js";
 
-interface CheckpointOptions {
+interface CheckpointOptions extends SandboxBranchOptions {
   name?: string;
 }
 
@@ -16,7 +17,10 @@ async function checkpointAction(
   const { id: appId } = getAppContext();
 
   const result = await runTask("Creating checkpoint", () =>
-    createCheckpoint(appId, { name: options.name }),
+    createCheckpoint(appId, {
+      name: options.name,
+      branch_id: options.branchId,
+    }),
   );
 
   return { outroMessage: "Created checkpoint", stdout: toJsonStdout(result) };
@@ -29,6 +33,7 @@ export function getSandboxCheckpointCommand(): Command {
       "--name <name>",
       "Optional message/title for the checkpoint (defaults to an auto-generated title)",
     )
+    .option("--branch-id <id>", "Operate on a specific app branch")
     .addHelpText(
       "after",
       `

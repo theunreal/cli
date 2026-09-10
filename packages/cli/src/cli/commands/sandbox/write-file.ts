@@ -3,16 +3,15 @@ import type { CLIContext, RunCommandResult } from "@/cli/types.js";
 import { Base44Command } from "@/cli/utils/index.js";
 import { getAppContext } from "@/core/project/index.js";
 import { writeFile } from "@/core/resources/sandbox/api.js";
-import type { SandboxBranchOptions } from "./shared.js";
 import { resolveFlagOrStdin, toJsonStdout } from "./shared.js";
 
-interface WriteFileOptions extends SandboxBranchOptions {
+interface WriteFileOptions {
   content?: string;
   overwrite?: boolean;
 }
 
 async function writeFileAction(
-  { runTask }: CLIContext,
+  { runTask, branchId }: CLIContext,
   path: string,
   options: WriteFileOptions,
 ): Promise<RunCommandResult> {
@@ -24,7 +23,7 @@ async function writeFileAction(
       path,
       content,
       overwrite: options.overwrite,
-      branch_id: options.branchId,
+      branch_id: branchId,
     }),
   );
 
@@ -32,12 +31,11 @@ async function writeFileAction(
 }
 
 export function getSandboxWriteFileCommand(): Command {
-  return new Base44Command("write")
+  return new Base44Command("write", { supportsBranch: true })
     .description("Create or overwrite a file in an app's remote sandbox")
     .argument("<path>", "File path relative to the app root")
     .option("--content <content>", "File content (if omitted, read from stdin)")
     .option("--overwrite", "Overwrite the file if it already exists")
-    .option("--branch-id <id>", "Operate on a specific app branch")
     .addHelpText(
       "after",
       `

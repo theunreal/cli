@@ -8,6 +8,46 @@ const base = `/api/apps/${APP_ID}/sandbox-bridge`;
 describe("sandbox commands", () => {
   const t = setupCLITests();
 
+  it("accepts --branch-id before the subcommand", async () => {
+    await t.givenLoggedIn({ email: "test@example.com", name: "Test User" });
+    t.api.mockRoute("POST", `${base}/list_directory`, (req, res) => {
+      expect(req.body.branch_id).toBe(BRANCH_ID);
+      res.json({ entries: [], truncated: false });
+    });
+
+    const result = await t.run(
+      "--branch-id",
+      BRANCH_ID,
+      "sandbox",
+      "ls",
+      "--app-id",
+      APP_ID,
+    );
+    t.expectResult(result).toSucceed();
+  });
+
+  it.each([
+    ["functions", "pull"],
+    ["functions", "list"],
+    ["entities", "push"],
+    ["deploy"],
+    ["login"],
+  ])("rejects branch scope for %s %s before authentication", async (...command) => {
+    const result = await t.run(...command, "--branch-id", BRANCH_ID, "--json");
+    t.expectResult(result).toFail();
+    expect(JSON.parse(result.stdout).error).toContain(
+      "--branch-id is not supported by this command",
+    );
+  });
+
+  it("rejects an empty branch instead of falling back to main", async () => {
+    const result = await t.run("sandbox", "ls", "--branch-id", " ", "--json");
+    t.expectResult(result).toFail();
+    expect(JSON.parse(result.stdout).error).toBe(
+      "--branch-id must not be empty.",
+    );
+  });
+
   it("ls prints the JSON result", async () => {
     // Given
     await t.givenLoggedIn({ email: "test@example.com", name: "Test User" });

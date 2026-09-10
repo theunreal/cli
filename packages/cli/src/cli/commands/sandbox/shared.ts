@@ -5,10 +5,6 @@ import { InvalidInputError } from "@/core/errors.js";
 // one implementation of the `--json` serializer.
 export { toJsonStdout } from "@/cli/utils/index.js";
 
-export interface SandboxBranchOptions {
-  branchId?: string;
-}
-
 /**
  * Resolve a payload that may come from a flag or piped stdin.
  * Returns the flag value when set, otherwise reads stdin (without trimming, so

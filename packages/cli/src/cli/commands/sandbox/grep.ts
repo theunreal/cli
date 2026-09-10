@@ -3,10 +3,9 @@ import type { CLIContext, RunCommandResult } from "@/cli/types.js";
 import { Base44Command } from "@/cli/utils/index.js";
 import { getAppContext } from "@/core/project/index.js";
 import { grep } from "@/core/resources/sandbox/api.js";
-import type { SandboxBranchOptions } from "./shared.js";
 import { parsePositiveInt, toJsonStdout } from "./shared.js";
 
-interface GrepOptions extends SandboxBranchOptions {
+interface GrepOptions {
   path?: string;
   regex?: boolean;
   caseSensitive?: boolean;
@@ -15,7 +14,7 @@ interface GrepOptions extends SandboxBranchOptions {
 }
 
 async function grepAction(
-  { runTask }: CLIContext,
+  { runTask, branchId }: CLIContext,
   pattern: string,
   options: GrepOptions,
 ): Promise<RunCommandResult> {
@@ -30,7 +29,7 @@ async function grepAction(
       case_sensitive: options.caseSensitive,
       glob: options.glob,
       max_results: maxResults,
-      branch_id: options.branchId,
+      branch_id: branchId,
     }),
   );
 
@@ -38,7 +37,7 @@ async function grepAction(
 }
 
 export function getSandboxGrepCommand(): Command {
-  return new Base44Command("grep")
+  return new Base44Command("grep", { supportsBranch: true })
     .description("Search files for a pattern in an app's remote sandbox")
     .argument("<pattern>", "Search pattern")
     .option("--path <path>", "Subtree to search, relative to the app root")
@@ -46,6 +45,5 @@ export function getSandboxGrepCommand(): Command {
     .option("--case-sensitive", "Case-sensitive match")
     .option("--glob <glob>", 'File glob filter, e.g. "*.tsx"')
     .option("--max-results <n>", "Maximum number of match lines to return")
-    .option("--branch-id <id>", "Operate on a specific app branch")
     .action(grepAction);
 }

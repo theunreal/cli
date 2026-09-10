@@ -3,16 +3,15 @@ import type { CLIContext, RunCommandResult } from "@/cli/types.js";
 import { Base44Command } from "@/cli/utils/index.js";
 import { getAppContext } from "@/core/project/index.js";
 import { runCommand } from "@/core/resources/sandbox/api.js";
-import type { SandboxBranchOptions } from "./shared.js";
 import { parsePositiveInt, toJsonStdout } from "./shared.js";
 
-interface RunCommandOptions extends SandboxBranchOptions {
+interface RunCommandOptions {
   cwd?: string;
   timeoutMs?: string;
 }
 
 async function runCommandAction(
-  { runTask }: CLIContext,
+  { runTask, branchId }: CLIContext,
   commandParts: string[],
   options: RunCommandOptions,
 ): Promise<RunCommandResult> {
@@ -25,7 +24,7 @@ async function runCommandAction(
       command,
       cwd: options.cwd,
       timeout_ms: timeoutMs,
-      branch_id: options.branchId,
+      branch_id: branchId,
     }),
   );
 
@@ -35,7 +34,7 @@ async function runCommandAction(
 }
 
 export function getSandboxRunCommandCommand(): Command {
-  return new Base44Command("run")
+  return new Base44Command("run", { supportsBranch: true })
     .description("Run a shell command in an app's remote sandbox")
     .argument("<command...>", "Shell command to execute (quote to keep as one)")
     .option("--cwd <path>", "Working directory relative to the app root")
@@ -43,7 +42,6 @@ export function getSandboxRunCommandCommand(): Command {
       "--timeout-ms <n>",
       "Timeout in milliseconds (default 120000, max 600000)",
     )
-    .option("--branch-id <id>", "Operate on a specific app branch")
     .addHelpText(
       "after",
       `

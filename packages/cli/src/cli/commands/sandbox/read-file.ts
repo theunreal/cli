@@ -3,16 +3,15 @@ import type { CLIContext, RunCommandResult } from "@/cli/types.js";
 import { Base44Command } from "@/cli/utils/index.js";
 import { getAppContext } from "@/core/project/index.js";
 import { readFile } from "@/core/resources/sandbox/api.js";
-import type { SandboxBranchOptions } from "./shared.js";
 import { parsePositiveInt, toJsonStdout } from "./shared.js";
 
-interface ReadFileOptions extends SandboxBranchOptions {
+interface ReadFileOptions {
   offset?: string;
   limit?: string;
 }
 
 async function readFileAction(
-  { runTask }: CLIContext,
+  { runTask, branchId }: CLIContext,
   paths: string[],
   options: ReadFileOptions,
 ): Promise<RunCommandResult> {
@@ -21,18 +20,17 @@ async function readFileAction(
   const limit = parsePositiveInt(options.limit, "--limit");
 
   const result = await runTask("Reading file", () =>
-    readFile(appId, { paths, offset, limit, branch_id: options.branchId }),
+    readFile(appId, { paths, offset, limit, branch_id: branchId }),
   );
 
   return { outroMessage: "Read file", stdout: toJsonStdout(result) };
 }
 
 export function getSandboxReadFileCommand(): Command {
-  return new Base44Command("read")
+  return new Base44Command("read", { supportsBranch: true })
     .description("Read file contents from an app's remote sandbox")
     .argument("<paths...>", "One or more file paths relative to the app root")
     .option("--offset <n>", "1-based start line")
     .option("--limit <n>", "Max lines to return from offset")
-    .option("--branch-id <id>", "Operate on a specific app branch")
     .action(readFileAction);
 }

@@ -3,17 +3,16 @@ import type { CLIContext, RunCommandResult } from "@/cli/types.js";
 import { Base44Command } from "@/cli/utils/index.js";
 import { getAppContext } from "@/core/project/index.js";
 import { listDirectory } from "@/core/resources/sandbox/api.js";
-import type { SandboxBranchOptions } from "./shared.js";
 import { parsePositiveInt, toJsonStdout } from "./shared.js";
 
-interface ListDirectoryOptions extends SandboxBranchOptions {
+interface ListDirectoryOptions {
   recursive?: boolean;
   maxDepth?: string;
   includeHidden?: boolean;
 }
 
 async function listDirectoryAction(
-  { runTask }: CLIContext,
+  { runTask, branchId }: CLIContext,
   path: string | undefined,
   options: ListDirectoryOptions,
 ): Promise<RunCommandResult> {
@@ -23,7 +22,7 @@ async function listDirectoryAction(
   const result = await runTask("Listing directory", () =>
     listDirectory(appId, {
       path,
-      branch_id: options.branchId,
+      branch_id: branchId,
       recursive: options.recursive,
       max_depth: maxDepth,
       include_hidden: options.includeHidden,
@@ -34,7 +33,7 @@ async function listDirectoryAction(
 }
 
 export function getSandboxListDirectoryCommand(): Command {
-  return new Base44Command("ls")
+  return new Base44Command("ls", { supportsBranch: true })
     .description("List directory entries in an app's remote sandbox")
     .argument(
       "[path]",
@@ -43,6 +42,5 @@ export function getSandboxListDirectoryCommand(): Command {
     .option("--recursive", "List nested entries")
     .option("--max-depth <n>", "Max depth when recursive (1-10, default 3)")
     .option("--include-hidden", "Include dotfiles")
-    .option("--branch-id <id>", "Operate on a specific app branch")
     .action(listDirectoryAction);
 }

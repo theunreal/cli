@@ -6,10 +6,9 @@ import { InvalidInputError } from "@/core/errors.js";
 import { getAppContext } from "@/core/project/index.js";
 import { editFile } from "@/core/resources/sandbox/api.js";
 import type { EditSpec } from "@/core/resources/sandbox/schema.js";
-import type { SandboxBranchOptions } from "./shared.js";
 import { resolveFlagOrStdin, toJsonStdout } from "./shared.js";
 
-interface EditFileOptions extends SandboxBranchOptions {
+interface EditFileOptions {
   editsJson?: string;
   dryRun?: boolean;
 }
@@ -43,7 +42,7 @@ function parseEdits(raw: string): EditSpec[] {
 }
 
 async function editFileAction(
-  { runTask }: CLIContext,
+  { runTask, branchId }: CLIContext,
   path: string,
   options: EditFileOptions,
 ): Promise<RunCommandResult> {
@@ -58,7 +57,7 @@ async function editFileAction(
         path,
         edits,
         dry_run: options.dryRun,
-        branch_id: options.branchId,
+        branch_id: branchId,
       }),
   );
 
@@ -69,7 +68,7 @@ async function editFileAction(
 }
 
 export function getSandboxEditFileCommand(): Command {
-  return new Base44Command("edit")
+  return new Base44Command("edit", { supportsBranch: true })
     .description("Apply exact old→new string edits to a file in the sandbox")
     .argument("<path>", "File path relative to the app root")
     .option(
@@ -77,7 +76,6 @@ export function getSandboxEditFileCommand(): Command {
       "JSON array of edits (if omitted, read from stdin)",
     )
     .option("--dry-run", "Return the unified diff without writing")
-    .option("--branch-id <id>", "Operate on a specific app branch")
     .addHelpText(
       "after",
       `

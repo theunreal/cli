@@ -15,7 +15,7 @@ import {
   formatPlainUpgradeMessage,
   startUpgradeCheck,
 } from "@/cli/utils/upgradeNotification.js";
-import { ApiError, isCLIError } from "@/core/errors.js";
+import { ApiError, InvalidInputError, isCLIError } from "@/core/errors.js";
 
 /**
  * Write a command result to stdout as a single JSON document (the `--json`
@@ -67,6 +67,7 @@ function writeJsonError(error: unknown): void {
 }
 
 interface Base44CommandOptions {
+  supportsBranch?: boolean;
   /**
    * Require user authentication before running this command.
    * If the user is not logged in, they will be prompted to login.
@@ -130,6 +131,7 @@ export class Base44Command extends Command {
       requireAuth: options?.requireAuth ?? true,
       requireAppContext: options?.requireAppContext ?? true,
       fullBanner: options?.fullBanner ?? false,
+      supportsBranch: options?.supportsBranch ?? false,
     };
   }
 
@@ -172,6 +174,15 @@ export class Base44Command extends Command {
       const upgradeCheckPromise = startUpgradeCheck();
 
       try {
+        const { branchId } = this.optsWithGlobals<{ branchId?: string }>();
+        if (branchId !== undefined && !this._commandOptions.supportsBranch) {
+          throw new InvalidInputError(
+            `--branch-id is not supported by this command. Use sandbox commands to read or edit branch files; no app changes were made.`,
+          );
+        }
+        if (branchId !== undefined && !branchId.trim()) {
+          throw new InvalidInputError("--branch-id must not be empty.");
+        }
         if (this._commandOptions.requireAuth) {
           await ensureAuth(this.context);
         }
@@ -180,7 +191,7 @@ export class Base44Command extends Command {
           await ensureAppContext(this.context, { appId });
         }
 
-        const result = ((await fn(this.context, ...args)) ??
+        const result = ((await fn({ ...this.context, branchId }, ...args)) ??
           {}) as RunCommandResult;
 
         if (!quiet) {
